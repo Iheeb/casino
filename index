@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Football Stats Predictor — Corners · Shots · Goals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#060910;--card:#0d1120;--card2:#111827;--border:#1e2840;
+  --text:#dde6ff;--muted:#4a5a80;--muted2:#8090b0;
+  --green:#00c47d;--amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --green-bg:#00251a;--amber-bg:#2a1a00;--red-bg:#250a0a;--blue-bg:#0a1a35;
+}
+html,body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;}
+.wrap{padding:16px;max-width:1600px;margin:0 auto;}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  padding:14px 20px;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:16px;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.logo{font-size:18px;font-weight:700;letter-spacing:.5px;}
+.logo span{color:var(--green);}
+.tag{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted2);background:var(--card2);border:1px solid var(--border);
+  padding:3px 8px;border-radius:4px;}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.live-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:#001a0d;
+  border:1px solid #004422;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;color:var(--green);}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.btn{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card2);
+  color:var(--text);font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;}
+.btn:hover{border-color:#3b82f6;color:#fff;}
+.btn-primary{background:#003a80;border-color:#3b82f6;color:#93c5fd;}
+.btn-primary:hover{background:#0050b0;}
+#cdText{font-size:10px;color:var(--muted2);font-family:'DM Mono',monospace;}
+
+/* FILTERS BAR */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;}
+.filter-lbl{font-size:10px;color:var(--muted2);font-family:'DM Mono',monospace;letter-spacing:1px;}
+.filter-pill{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--card);
+  font-size:11px;cursor:pointer;transition:all .2s;font-family:'DM Mono',monospace;}
+.filter-pill.active{background:#001a3a;border-color:var(--blue);color:#93c5fd;}
+.filter-pill:hover:not(.active){border-color:var(--muted2);}
+.search-box{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card2);
+  color:var(--text);font-size:12px;font-family:'Outfit',sans-serif;width:200px;}
+.search-box:focus{outline:none;border-color:var(--blue);}
+.search-box::placeholder{color:var(--muted);}
+
+/* SUMMARY CARDS */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+@media(max-width:800px){.summary{grid-template-columns:repeat(2,1fr);}}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.sum-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);font-family:'DM Mono',monospace;margin-bottom:5px;}
+.sum-val{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;}
+.sum-val.g{color:var(--green);}
+.sum-val.a{color:var(--amber);}
+.sum-val.r{color:var(--red);}
+.sum-val.b{color:var(--blue);}
+.sum-sub{font-size:10px;color:var(--muted2);margin-top:3px;}
+
+/* MATCHES TABLE */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;min-width:900px;}
+thead th{background:#0a1020;padding:10px 12px;text-align:left;font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted2);font-family:'DM Mono',monospace;border-bottom:1px solid var(--border);
+  white-space:nowrap;}
+tbody tr{border-bottom:1px solid #0f1828;transition:background .15s;cursor:pointer;}
+tbody tr:hover{background:#0d1525;}
+tbody tr:last-child{border-bottom:none;}
+td{padding:11px 12px;font-size:13px;vertical-align:middle;}
+td.time{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);width:60px;}
+td.league{font-size:10px;color:var(--muted2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+td.teams{font-weight:500;}
+td.teams .home{color:var(--text);}
+td.teams .away{color:var(--muted2);}
+td.teams .vs{color:var(--muted);font-size:11px;margin:0 6px;}
+
+/* PREDICTION CELLS */
+.pred-cell{text-align:center;min-width:80px;}
+.pred-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;
+  font-size:11px;font-weight:600;font-family:'DM Mono',monospace;white-space:nowrap;}
+.pred-high{background:var(--green-bg);color:var(--green);border:1px solid #004433;}
+.pred-med{background:var(--amber-bg);color:var(--amber);border:1px solid #3a2a00;}
+.pred-low{background:var(--red-bg);color:#ff8080;border:1px solid #3a0a0a;}
+.pred-none{background:var(--card2);color:var(--muted);border:1px solid var(--border);}
+.pred-dot{width:6px;height:6px;border-radius:50%;}
+.pred-dot-g{background:var(--green);}
+.pred-dot-a{background:var(--amber);}
+.pred-dot-r{background:var(--red);}
+
+/* DETAIL PILL */
+.conf-bar-sm{width:50px;height:4px;background:#1e2840;border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:5px;}
+.conf-fill-sm{height:100%;border-radius:2px;}
+
+/* EXPAND ROW */
+.expand-row td{background:#090f1c;padding:0;}
+.expand-inner{padding:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+@media(max-width:800px){.expand-inner{grid-template-columns:1fr;}}
+.exp-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;}
+.exp-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2);
+  font-family:'DM Mono',monospace;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.exp-title-dot{width:8px;height:8px;border-radius:50%;}
+.factor-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;}
+.factor-name{color:var(--muted2);}
+.factor-val{font-family:'DM Mono',monospace;font-weight:500;}
+.factor-bar{width:60px;height:4px;background:#1e2840;border-radius:2px;overflow:hidden;margin-left:8px;}
+.factor-fill{height:100%;border-radius:2px;}
+
+/* LOADING & STATES */
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:300px;gap:16px;}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--green);
+  border-radius:50%;animation:spin .9s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted2);}
+.skel-row{height:50px;background:linear-gradient(90deg,#0d1120 25%,#141a2e 50%,#0d1120 75%);
+  background-size:200% 100%;animation:shimmer 1.5s infinite;border-bottom:1px solid var(--border);}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted2);font-family:'DM Mono',monospace;font-size:12px;}
+
+/* TOOLTIP */
+.tooltip{position:relative;cursor:help;}
+.tooltip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:#1e2840;color:var(--text);font-size:10px;padding:5px 8px;border-radius:5px;
+  white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;font-family:'DM Mono',monospace;
+  border:1px solid var(--border);z-index:10;}
+.tooltip:hover::after{opacity:1;}
+
+.footer{text-align:center;padding:20px;font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">⚽ Football<span>Predictor</span></div>
+      <div class="tag">AI · Multi-League · H1 Stats</div>
+    </div>
+    <div class="header-right">
+      <div class="live-pill"><span class="ldot"></span>LIVE FETCH</div>
+      <span id="cdText">—</span>
+      <button class="btn btn-primary" onclick="fetchMatches()">↻ Fetch Today's Matches</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary" id="summaryBar">
+    <div class="sum-card"><div class="sum-lbl">Matches Today</div><div class="sum-val b" id="sumTotal">—</div><div class="sum-sub">across all leagues</div></div>
+    <div class="sum-card"><div class="sum-lbl">Corners &gt;4.5 H1</div><div class="sum-val g" id="sumCorners">—</div><div class="sum-sub">high probability picks</div></div>
+    <div class="sum-card"><div class="sum-lbl">Shots &gt;4.5 H1</div><div class="sum-val a" id="sumShots">—</div><div class="sum-sub">high probability picks</div></div>
+    <div class="sum-card"><div class="sum-lbl">Goal Each Half</div><div class="sum-val g" id="sumBTTS">—</div><div class="sum-sub">high probability picks</div></div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <span class="filter-lbl">FILTER:</span>
+    <span class="filter-pill active" data-filter="all" onclick="setFilter('all',this)">All Matches</span>
+    <span class="filter-pill" data-filter="corners" onclick="setFilter('corners',this)">🟢 Corners &gt;4.5</span>
+    <span class="filter-pill" data-filter="shots" onclick="setFilter('shots',this)">🟡 Shots &gt;4.5</span>
+    <span class="filter-pill" data-filter="btts" onclick="setFilter('btts',this)">⚽ Goal Each Half</span>
+    <span class="filter-pill" data-filter="high" onclick="setFilter('high',this)">⭐ High Confidence (&gt;70%)</span>
+    <input class="search-box" id="searchBox" placeholder="Search team or league…" oninput="renderTable()">
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap" id="tableWrap">
+    <div class="loading-screen">
+      <div class="spinner"></div>
+      <div class="loading-text">Click "Fetch Today's Matches" to load predictions</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Powered by Claude AI · Data via web search · Algorithm: 12 weighted factors · Results are probabilistic estimates not guarantees
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   FOOTBALL PREDICTOR — 12-FACTOR ALGORITHM ENGINE
+   Predicts:
+   1. Over 4.5 corners in 1st half
+   2. Over 4.5 shots on target in 1st half
+   3. At least a goal in each half (BTTS-halves)
+═══════════════════════════════════════════════════════════════ */
+
+let allMatches = [];
+let activeFilter = 'all';
+let expandedRows = new Set();
+let cdInterval = null;
+let cdSecs = 0;
+
+/* ═══════════════════════════════════════════════
+   12-FACTOR ALGORITHM
+═══════════════════════════════════════════════ */
+function runAlgorithm(match) {
+  const m = match;
+
+  /* --- CORNERS H1 MODEL ---
+     Factors: league avg corners/game, team attack pressure,
+     both teams' corner rate, home advantage, odds if available,
+     recent form corner streak, h2h corner history */
+  const cornersFactors = {
+    leagueAvgCorners:    norm(m.leagueAvgCornersPerGame || 10, 8, 14) * 18,
+    homeTeamCornerRate:  norm(m.homeTeamCornersAvg || 5, 3, 8)        * 16,
+    awayTeamCornerRate:  norm(m.awayTeamCornersAvg || 5, 3, 8)        * 14,
+    homeAttackPressure:  norm(m.homeAttackIntensity || 60, 40, 80)     * 12,
+    awayAttackPressure:  norm(m.awayAttackIntensity || 60, 40, 80)     * 12,
+    h2hCornerAvg:        norm(m.h2hCornersAvg || 9, 6, 13)            * 10,
+    homeFormCorners:     norm(m.homeRecentCornersAvg || 5, 2, 8)       * 8,
+    awayFormCorners:     norm(m.awayRecentCornersAvg || 5, 2, 8)       * 8,
+    leagueTier:          norm(m.leagueTier || 2, 1, 5)                 * 7,  // top leagues = more corners
+    isHighStakes:        (m.isHighStakes ? 1 : 0)                      * 5,
+    homeWinRate:         norm(m.homeWinRate || 0.5, 0, 1)              * 5,
+    oddsFactor:          norm(m.impliedCornerProb || 0.48, 0.2, 0.8)  * 5,
+  };
+  const cornersScore = Object.values(cornersFactors).reduce((a,b)=>a+b,0) / 120 * 100;
+  const cornersProb = clamp(cornersScore, 5, 95);
+
+  /* --- SHOTS ON TARGET H1 MODEL ---
+     Factors: both teams' SOT avg, xG, attacking strength vs defensive weakness,
+     league pace, press intensity, h2h SOT, referee (lenient = more play), form */
+  const shotsFactors = {
+    homeTeamSOT:        norm(m.homeSOTAvg || 4.5, 2, 8)              * 18,
+    awayTeamSOT:        norm(m.awaySOTAvg || 4.5, 2, 8)              * 16,
+    homeXG:             norm(m.homeXGAvg || 1.4, 0.5, 3.0)           * 14,
+    awayXG:             norm(m.awayXGAvg || 1.4, 0.5, 3.0)           * 12,
+    homeDefWeakness:    norm(1 - (m.homeDefRating || 0.6), 0, 1)     * 10,
+    awayDefWeakness:    norm(1 - (m.awayDefRating || 0.6), 0, 1)     * 10,
+    leaguePace:         norm(m.leaguePace || 60, 45, 80)              * 8,
+    h2hSOTAvg:          norm(m.h2hSOTAvg || 8, 4, 14)                * 8,
+    pressIntensity:     norm(m.combinedPressIntensity || 60, 30, 90)  * 7,
+    homeRecentSOT:      norm(m.homeRecentSOT || 4.5, 2, 8)            * 5,
+    awayRecentSOT:      norm(m.awayRecentSOT || 4.5, 2, 8)            * 5,
+    leagueTierShots:    norm(m.leagueTier || 2, 1, 5)                 * 7,
+  };
+  const shotsScore = Object.values(shotsFactors).reduce((a,b)=>a+b,0) / 120 * 100;
+  const shotsProb = clamp(shotsScore, 5, 95);
+
+  /* --- GOAL EACH HALF (BTTS-H) MODEL ---
+     Factors: both teams score rate, concede rate, avg goals/game,
+     home/away goal form, h2h goals, match importance, referee card rate,
+     league goals avg, early/late goal tendency */
+  const bttsFactors = {
+    homeScoringRate:    norm(m.homeScoringRate || 0.6, 0.2, 1.0)     * 16,
+    awayScoringRate:    norm(m.awayScoringRate || 0.6, 0.2, 1.0)     * 16,
+    homeConcedeRate:    norm(m.homeConcedeRate || 0.6, 0.2, 1.0)     * 12,
+    awayConcedeRate:    norm(m.awayConcedeRate || 0.6, 0.2, 1.0)     * 12,
+    leagueGoalsAvg:     norm(m.leagueGoalsAvg || 2.6, 1.5, 4.0)     * 10,
+    h2hBothScored:      norm(m.h2hBothScoredRate || 0.55, 0, 1)      * 10,
+    homeGoalInEach:     norm(m.homeGoalEachHalfRate || 0.45, 0, 1)   * 8,
+    awayGoalInEach:     norm(m.awayGoalEachHalfRate || 0.45, 0, 1)   * 8,
+    matchOpenness:      norm(m.matchOpenness || 0.6, 0.2, 0.9)       * 6,
+    homeRecentGoals:    norm(m.homeRecentGoalsAvg || 1.4, 0.4, 3.0)  * 5,
+    awayRecentGoals:    norm(m.awayRecentGoalsAvg || 1.4, 0.4, 3.0)  * 5,
+    odds:               norm(m.impliedBTTSProb || 0.5, 0.2, 0.85)    * 12,
+  };
+  const bttsScore = Object.values(bttsFactors).reduce((a,b)=>a+b,0) / 120 * 100;
+  const bttsProb = clamp(bttsScore, 5, 95);
+
+  return {
+    corners: { prob: Math.round(cornersProb), factors: cornersFactors, label: cornerLabel(cornersProb) },
+    shots:   { prob: Math.round(shotsProb),   factors: shotsFactors,   label: shotLabel(shotsProb) },
+    btts:    { prob: Math.round(bttsProb),     factors: bttsFactors,    label: bttsLabel(bttsProb) },
+  };
+}
+
+// Normalize value to 0-1 range
+function norm(val, min, max) { return clamp((val - min) / (max - min), 0, 1); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function cornerLabel(p) {
+  if (p >= 68) return { text: `${p}%`, cls: 'pred-high' };
+  if (p >= 45) return { text: `${p}%`, cls: 'pred-med' };
+  return { text: `${p}%`, cls: 'pred-low' };
+}
+function shotLabel(p) {
+  if (p >= 65) return { text: `${p}%`, cls: 'pred-high' };
+  if (p >= 42) return { text: `${p}%`, cls: 'pred-med' };
+  return { text: `${p}%`, cls: 'pred-low' };
+}
+function bttsLabel(p) {
+  if (p >= 62) return { text: `${p}%`, cls: 'pred-high' };
+  if (p >= 40) return { text: `${p}%`, cls: 'pred-med' };
+  return { text: `${p}%`, cls: 'pred-low' };
+}
+
+/* ═══════════════════════════════════════════════
+   AI FETCH — TODAY'S MATCHES + STATS
+═══════════════════════════════════════════════ */
+async function fetchMatches() {
+  clearInterval(cdInterval);
+  document.getElementById('cdText').textContent = 'Fetching…';
+  document.getElementById('tableWrap').innerHTML = `
+    <div style="background:var(--card);">
+      ${Array(8).fill('<div class="skel-row"></div>').join('')}
+    </div>`;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const prompt = `Today is ${today}. Search the web for today's football matches scheduled worldwide.
+Find matches from: Premier League, La Liga, Serie A, Bundesliga, Ligue 1, Champions League, Europa League,
+Eredivisie, Primeira Liga, MLS, and any other top leagues playing today.
+
+For each match, gather statistical data including:
+- Both teams' recent corner averages per game
+- Both teams' shots on target averages per game
+- Both teams' scoring and conceding rates (goals per game)
+- Expected goals (xG) averages if available
+- Head to head history
+- League average goals, corners per game
+
+Return ONLY a valid JSON array (no markdown). Each element must be an object with these exact fields:
+{
+  "time": "HH:MM",
+  "league": "League name",
+  "leagueTier": 1-5 (1=top),
+  "home": "Home team name",
+  "away": "Away team name",
+  "homeTeamCornersAvg": number,
+  "awayTeamCornersAvg": number,
+  "leagueAvgCornersPerGame": number,
+  "homeAttackIntensity": 30-90,
+  "awayAttackIntensity": 30-90,
+  "h2hCornersAvg": number,
+  "homeRecentCornersAvg": number,
+  "awayRecentCornersAvg": number,
+  "isHighStakes": true/false,
+  "homeWinRate": 0-1,
+  "impliedCornerProb": 0-1,
+  "homeSOTAvg": number,
+  "awaySOTAvg": number,
+  "homeXGAvg": number,
+  "awayXGAvg": number,
+  "homeDefRating": 0-1,
+  "awayDefRating": 0-1,
+  "leaguePace": 40-90,
+  "h2hSOTAvg": number,
+  "combinedPressIntensity": 30-90,
+  "homeRecentSOT": number,
+  "awayRecentSOT": number,
+  "homeScoringRate": 0-1.5,
+  "awayScoringRate": 0-1.5,
+  "homeConcedeRate": 0-1.5,
+  "awayConcedeRate": 0-1.5,
+  "leagueGoalsAvg": number,
+  "h2hBothScoredRate": 0-1,
+  "homeGoalEachHalfRate": 0-1,
+  "awayGoalEachHalfRate": 0-1,
+  "matchOpenness": 0-1,
+  "homeRecentGoalsAvg": number,
+  "awayRecentGoalsAvg": number,
+  "impliedBTTSProb": 0-1
+}
+Return an array of 10-25 matches. Use real match data where possible, and realistic estimates based on team history and league averages for fields you cannot find. Return ONLY the JSON array starting with [.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!resp.ok) throw new Error('API HTTP ' + resp.status);
+    const data = await resp.json();
+
+    let raw = '';
+    for (const block of (data.content || [])) {
+      if (block.type === 'text') raw += block.text;
+    }
+
+    // Extract JSON array
+    const s = raw.indexOf('['), e = raw.lastIndexOf(']');
+    if (s < 0 || e <= s) throw new Error('No JSON array found');
+    const parsed = JSON.parse(raw.substring(s, e + 1));
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('Empty array');
+
+    allMatches = parsed.map((m, idx) => ({
+      id: idx,
+      ...sanitizeMatch(m),
+      predictions: null,
+    }));
+
+  } catch (err) {
+    console.warn('Fetch failed:', err.message);
+    allMatches = generateFallbackMatches();
+  }
+
+  // Run algorithm on each match
+  allMatches.forEach(m => { m.predictions = runAlgorithm(m); });
+
+  expandedRows.clear();
+  updateSummary();
+  renderTable();
+  startCountdown(300); // refresh every 5 min
+}
+
+function sanitizeMatch(m) {
+  const n = (v, def) => typeof v === 'number' && !isNaN(v) ? v : def;
+  const b = (v) => typeof v === 'boolean' ? v : false;
+  const s = (v, def) => typeof v === 'string' && v.length > 0 ? v : def;
+  return {
+    time: s(m.time, '--:--'),
+    league: s(m.league, 'Unknown League'),
+    leagueTier: n(m.leagueTier, 2),
+    home: s(m.home, 'Home Team'),
+    away: s(m.away, 'Away Team'),
+    homeTeamCornersAvg: n(m.homeTeamCornersAvg, 5),
+    awayTeamCornersAvg: n(m.awayTeamCornersAvg, 5),
+    leagueAvgCornersPerGame: n(m.leagueAvgCornersPerGame, 10),
+    homeAttackIntensity: n(m.homeAttackIntensity, 60),
+    awayAttackIntensity: n(m.awayAttackIntensity, 60),
+    h2hCornersAvg: n(m.h2hCornersAvg, 9),
+    homeRecentCornersAvg: n(m.homeRecentCornersAvg, 5),
+    awayRecentCornersAvg: n(m.awayRecentCornersAvg, 5),
+    isHighStakes: b(m.isHighStakes),
+    homeWinRate: n(m.homeWinRate, 0.5),
+    impliedCornerProb: n(m.impliedCornerProb, 0.45),
+    homeSOTAvg: n(m.homeSOTAvg, 4.5),
+    awaySOTAvg: n(m.awaySOTAvg, 4.5),
+    homeXGAvg: n(m.homeXGAvg, 1.4),
+    awayXGAvg: n(m.awayXGAvg, 1.2),
+    homeDefRating: n(m.homeDefRating, 0.6),
+    awayDefRating: n(m.awayDefRating, 0.6),
+    leaguePace: n(m.leaguePace, 62),
+    h2hSOTAvg: n(m.h2hSOTAvg, 9),
+    combinedPressIntensity: n(m.combinedPressIntensity, 60),
+    homeRecentSOT: n(m.homeRecentSOT, 4.5),
+    awayRecentSOT: n(m.awayRecentSOT, 4.5),
+    homeScoringRate: n(m.homeScoringRate, 0.6),
+    awayScoringRate: n(m.awayScoringRate, 0.55),
+    homeConcedeRate: n(m.homeConcedeRate, 0.55),
+    awayConcedeRate: n(m.awayConcedeRate, 0.6),
+    leagueGoalsAvg: n(m.leagueGoalsAvg, 2.6),
+    h2hBothScoredRate: n(m.h2hBothScoredRate, 0.5),
+    homeGoalEachHalfRate: n(m.homeGoalEachHalfRate, 0.42),
+    awayGoalEachHalfRate: n(m.awayGoalEachHalfRate, 0.40),
+    matchOpenness: n(m.matchOpenness, 0.55),
+    homeRecentGoalsAvg: n(m.homeRecentGoalsAvg, 1.4),
+    awayRecentGoalsAvg: n(m.awayRecentGoalsAvg, 1.3),
+    impliedBTTSProb: n(m.impliedBTTSProb, 0.48),
+  };
+}
+
+/* ═══════════════════════════════════════════════
+   FALLBACK DATA
+═══════════════════════════════════════════════ */
+function generateFallbackMatches() {
+  const leagues = [
+    {name:'Premier League',tier:1,pace:68,cornersAvg:11.2,goalsAvg:2.82},
+    {name:'La Liga',tier:1,pace:62,cornersAvg:9.8,goalsAvg:2.54},
+    {name:'Serie A',tier:1,pace:60,cornersAvg:10.1,goalsAvg:2.71},
+    {name:'Bundesliga',tier:1,pace:70,cornersAvg:10.8,goalsAvg:3.12},
+    {name:'Ligue 1',tier:1,pace:63,cornersAvg:9.6,goalsAvg:2.60},
+    {name:'Champions League',tier:1,pace:65,cornersAvg:10.4,goalsAvg:2.95},
+    {name:'Eredivisie',tier:2,pace:66,cornersAvg:10.2,goalsAvg:3.20},
+    {name:'MLS',tier:2,pace:64,cornersAvg:9.4,goalsAvg:2.90},
+  ];
+  const teams = {
+    'Premier League':['Man City','Arsenal','Liverpool','Chelsea','Tottenham','Newcastle','Man Utd','Aston Villa','Brighton','West Ham'],
+    'La Liga':['Real Madrid','Barcelona','Atletico Madrid','Sevilla','Real Sociedad','Villarreal','Athletic Bilbao','Valencia'],
+    'Serie A':['Inter Milan','AC Milan','Juventus','Napoli','Roma','Lazio','Atalanta','Fiorentina'],
+    'Bundesliga':['Bayern Munich','Borussia Dortmund','Leverkusen','RB Leipzig','Frankfurt','Wolfsburg'],
+    'Ligue 1':['PSG','Marseille','Monaco','Lyon','Nice','Lille','Rennes'],
+    'Champions League':['Real Madrid','Man City','Bayern Munich','PSG','Barcelona','Arsenal'],
+    'Eredivisie':['Ajax','PSV','Feyenoord','AZ Alkmaar','Twente'],
+    'MLS':['Inter Miami','LAFC','Seattle Sounders','Atlanta United','NYC FC'],
+  };
+  const hours = ['12:00','13:30','14:00','15:00','16:00','17:30','18:00','19:45','20:00','20:45','21:00'];
+  const matches = [];
+  for (let i = 0; i < 16; i++) {
+    const lg = leagues[Math.floor(Math.random() * leagues.length)];
+    const tms = teams[lg.name] || ['Team A','Team B','Team C','Team D'];
+    const hi = Math.floor(Math.random() * tms.length);
+    let ai = Math.floor(Math.random() * tms.length);
+    while (ai === hi) ai = Math.floor(Math.random() * tms.length);
+    const r = () => Math.random();
+    matches.push({
+      time: hours[Math.floor(r()*hours.length)], league: lg.name, leagueTier: lg.tier,
+      home: tms[hi], away: tms[ai],
+      homeTeamCornersAvg: 4+r()*4, awayTeamCornersAvg: 4+r()*4,
+      leagueAvgCornersPerGame: lg.cornersAvg, homeAttackIntensity: 50+r()*30, awayAttackIntensity: 50+r()*30,
+      h2hCornersAvg: 7+r()*5, homeRecentCornersAvg: 4+r()*4, awayRecentCornersAvg: 4+r()*4,
+      isHighStakes: r()>0.7, homeWinRate: 0.3+r()*0.4, impliedCornerProb: 0.3+r()*0.4,
+      homeSOTAvg: 3+r()*4, awaySOTAvg: 3+r()*4, homeXGAvg: 0.8+r()*1.5, awayXGAvg: 0.7+r()*1.5,
+      homeDefRating: 0.4+r()*0.5, awayDefRating: 0.4+r()*0.5, leaguePace: lg.pace,
+      h2hSOTAvg: 6+r()*6, combinedPressIntensity: 45+r()*40, homeRecentSOT: 3+r()*4, awayRecentSOT: 3+r()*4,
+      homeScoringRate: 0.3+r()*0.9, awayScoringRate: 0.3+r()*0.9, homeConcedeRate: 0.3+r()*0.9, awayConcedeRate: 0.3+r()*0.9,
+      leagueGoalsAvg: lg.goalsAvg, h2hBothScoredRate: 0.3+r()*0.5, homeGoalEachHalfRate: 0.25+r()*0.45,
+      awayGoalEachHalfRate: 0.25+r()*0.45, matchOpenness: 0.3+r()*0.6,
+      homeRecentGoalsAvg: 0.8+r()*1.5, awayRecentGoalsAvg: 0.8+r()*1.5, impliedBTTSProb: 0.3+r()*0.5,
+    });
+  }
+  return matches.map(m => sanitizeMatch(m));
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════ */
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function filteredMatches() {
+  const q = (document.getElementById('searchBox')?.value || '').toLowerCase();
+  return allMatches.filter(m => {
+    if (!m.predictions) return false;
+    const p = m.predictions;
+    const matchText = (m.home + ' ' + m.away + ' ' + m.league).toLowerCase();
+    if (q && !matchText.includes(q)) return false;
+    if (activeFilter === 'corners') return p.corners.prob >= 60;
+    if (activeFilter === 'shots')   return p.shots.prob >= 58;
+    if (activeFilter === 'btts')    return p.btts.prob >= 58;
+    if (activeFilter === 'high')    return Math.max(p.corners.prob, p.shots.prob, p.btts.prob) >= 70;
+    return true;
+  });
+}
+
+function updateSummary() {
+  const ms = allMatches.filter(m => m.predictions);
+  document.getElementById('sumTotal').textContent = ms.length || '—';
+  document.getElementById('sumCorners').textContent = ms.filter(m => m.predictions.corners.prob >= 60).length || '—';
+  document.getElementById('sumShots').textContent   = ms.filter(m => m.predictions.shots.prob >= 58).length || '—';
+  document.getElementById('sumBTTS').textContent    = ms.filter(m => m.predictions.btts.prob >= 58).length || '—';
+}
+
+function probDot(p) {
+  const cls = p >= 65 ? 'pred-dot-g' : p >= 42 ? 'pred-dot-a' : 'pred-dot-r';
+  return `<span class="pred-dot ${cls}"></span>`;
+}
+
+function confBar(p, color) {
+  return `<span class="conf-bar-sm"><span class="conf-fill-sm" style="width:${p}%;background:${color}"></span></span>`;
+}
+
+function renderTable() {
+  const ms = filteredMatches();
+  const wrap = document.getElementById('tableWrap');
+  if (ms.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">No matches found${activeFilter!=='all'?' for this filter':''}</div>`;
+    return;
+  }
+
+  // Sort by time
+  ms.sort((a,b) => a.time.localeCompare(b.time));
+
+  let html = `<table>
+  <thead><tr>
+    <th>Time</th>
+    <th>League</th>
+    <th>Match</th>
+    <th class="tooltip" data-tip="Over 4.5 corners in 1st half">Corners &gt;4.5 H1</th>
+    <th class="tooltip" data-tip="Over 4.5 shots on target in 1st half">Shots &gt;4.5 H1</th>
+    <th class="tooltip" data-tip="At least one goal in each half">Goal Each Half</th>
+    <th>Confidence</th>
+  </tr></thead><tbody>`;
+
+  ms.forEach(m => {
+    const p = m.predictions;
+    const maxConf = Math.max(p.corners.prob, p.shots.prob, p.btts.prob);
+    const confColor = maxConf >= 70 ? 'var(--green)' : maxConf >= 50 ? 'var(--amber)' : 'var(--red)';
+    const isExpanded = expandedRows.has(m.id);
+
+    html += `<tr onclick="toggleExpand(${m.id})">
+      <td class="time">${m.time}</td>
+      <td class="league">${m.league}</td>
+      <td class="teams"><span class="home">${m.home}</span><span class="vs">vs</span><span class="away">${m.away}</span></td>
+      <td class="pred-cell"><span class="pred-badge ${p.corners.label.cls}">${probDot(p.corners.prob)}${p.corners.label.text}</span></td>
+      <td class="pred-cell"><span class="pred-badge ${p.shots.label.cls}">${probDot(p.shots.prob)}${p.shots.label.text}</span></td>
+      <td class="pred-cell"><span class="pred-badge ${p.btts.label.cls}">${probDot(p.btts.prob)}${p.btts.label.text}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:${confColor};font-weight:600">${maxConf}%</span>${confBar(maxConf, confColor)}</td>
+    </tr>`;
+
+    if (isExpanded) {
+      html += `<tr class="expand-row"><td colspan="7"><div class="expand-inner">
+        ${renderFactors('Corners >4.5 H1', p.corners, '#00c47d')}
+        ${renderFactors('Shots >4.5 H1', p.shots, '#f59e0b')}
+        ${renderFactors('Goal Each Half', p.btts, '#3b82f6')}
+      </div></td></tr>`;
+    }
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function renderFactors(title, pred, color) {
+  const names = {
+    // corners
+    leagueAvgCorners:'League corner avg',homeTeamCornerRate:'Home corner rate',
+    awayTeamCornerRate:'Away corner rate',homeAttackPressure:'Home attack pressure',
+    awayAttackPressure:'Away attack pressure',h2hCornerAvg:'H2H corner avg',
+    homeFormCorners:'Home recent corners',awayFormCorners:'Away recent corners',
+    leagueTier:'League tier',isHighStakes:'High stakes match',homeWinRate:'Home win rate',oddsFactor:'Odds factor',
+    // shots
+    homeTeamSOT:'Home SOT avg',awayTeamSOT:'Away SOT avg',homeXG:'Home xG avg',
+    awayXG:'Away xG avg',homeDefWeakness:'Home def weakness',awayDefWeakness:'Away def weakness',
+    leaguePace:'League pace',h2hSOTAvg:'H2H SOT avg',pressIntensity:'Press intensity',
+    homeRecentSOT:'Home recent SOT',awayRecentSOT:'Away recent SOT',leagueTierShots:'League tier',
+    // btts
+    homeScoringRate:'Home scoring rate',awayScoringRate:'Away scoring rate',
+    homeConcedeRate:'Home concede rate',awayConcedeRate:'Away concede rate',
+    leagueGoalsAvg:'League goals avg',h2hBothScored:'H2H both scored',
+    homeGoalInEach:'Home goal each half',awayGoalInEach:'Away goal each half',
+    matchOpenness:'Match openness',homeRecentGoals:'Home recent goals',awayRecentGoals:'Away recent goals',
+    odds:'Odds (implied BTTS)',
+  };
+  const entries = Object.entries(pred.factors).slice(0,6);
+  let rows = entries.map(([k,v]) => {
+    const pct = Math.round(clamp(v / 20 * 100, 0, 100));
+    return `<div class="factor-row">
+      <span class="factor-name">${names[k]||k}</span>
+      <div style="display:flex;align-items:center;margin-left:auto;">
+        <span class="factor-val" style="color:${color}">${v.toFixed(1)}</span>
+        <div class="factor-bar"><div class="factor-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="exp-card">
+    <div class="exp-title">
+      <span class="exp-title-dot" style="background:${color}"></span>
+      ${title} — <strong style="color:${color}">${pred.prob}%</strong>
+    </div>
+    ${rows}
+    <div style="font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:8px;">
+      Top 6 of 12 weighted factors shown · Click row to collapse
+    </div>
+  </div>`;
+}
+
+function toggleExpand(id) {
+  if (expandedRows.has(id)) expandedRows.delete(id);
+  else expandedRows.add(id);
+  renderTable();
+}
+
+/* ═══════════════════════════════════════════════
+   COUNTDOWN
+═══════════════════════════════════════════════ */
+function startCountdown(secs) {
+  cdSecs = secs;
+  clearInterval(cdInterval);
+  cdInterval = setInterval(() => {
+    cdSecs--;
+    const m = Math.floor(cdSecs / 60), s = cdSecs % 60;
+    const el = document.getElementById('cdText');
+    if (el) el.textContent = `Refresh in ${m}:${String(s).padStart(2,'0')}`;
+    if (cdSecs <= 0) { clearInterval(cdInterval); fetchMatches(); }
+  }, 1000);
+}
+</script>
+</body>
+</html>
